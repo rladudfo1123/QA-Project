@@ -1,0 +1,62 @@
+name: Playwright Python CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+env:
+  # 슬랙 웹훅 URL은 GitHub Secrets에 SLACK_WEBHOOK_URL 이름으로 저장해두고 여기서 꺼내쓴다
+  SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install deps (pip + browsers)
+        working-directory: ./Playwright
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          playwright install --with-deps
+
+      - name: Run pytest (JUnit + HTML)
+        working-directory: ./Playwright
+        run: |
+          pytest -q --junitxml=report.xml --html=report.html --self-contained-html
+
+      - name: Upload artifacts (always)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-python-report
+          path: |
+            Playwright/report.xml
+            Playwright/report.html
+
+      # ---- Slack 알림 (실패) ----
+      - name: Slack notify (failure)
+        if: failure() && env.SLACK_WEBHOOK_URL != ''
+        run: |
+          STATUS="❌ 실패"
+          TEXT="*${{ github.repository }}* · *${{ github.workflow }}*\n${STATUS}\n브랜치: \`${{ github.ref_name }}\`\n커밋: <https://github.com/${{ github.repository }}/commit/${{ github.sha }}|${{ github.sha }}>\n트리거: ${{ github.event_name }}\n런 로그: <https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|열기>"
+          curl -X POST -H 'Content-type: application/json' --data "{\"text\":\"${TEXT}\"}" "$SLACK_WEBHOOK_URL"
+
+      # ---- Slack 알림 (성공) ----
+      - name: Slack notify (success)
+        if: success() && env.SLACK_WEBHOOK_URL != ''
+        run: |
+          STATUS="✅ 성공"
+          TEXT="*${{ github.repository }}* · *${{ github.workflow }}*\n${STATUS}\n브랜치: \`${{ github.ref_name }}\`\n커밋: <https://github.com/${{ github.repository }}/commit/${{ github.sha }}|${{ github.sha }}>\n트리거: ${{ github.event_name }}\n런 로그: <https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|열기>"
+          curl -X POST -H 'Content-type: application/json' --data "{\"text\":\"${TEXT}\"}" "$SLACK_WEBHOOK_URL"
