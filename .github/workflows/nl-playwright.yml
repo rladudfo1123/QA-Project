@@ -67,7 +67,8 @@ jobs:
           curl -X POST -H 'Content-type: application/json' \
             --data "{\"text\": \"${TEXT}\"}" \
             "$SLACK_WEBHOOK_URL"
-            - name: Commit and push generated test file
+
+      - name: Commit and push generated test file
         if: always()  # 실패하든 말든 파일은 남기고 싶으면 always, 성공할 때만이면 success()
         run: |
           git config --local user.name "github-actions[bot]"
