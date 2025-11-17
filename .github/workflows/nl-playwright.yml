@@ -8,6 +8,9 @@ on:
         required: true
         type: string
 
+permissions:
+  contents: write
+
 jobs:
   generate-and-test:
     runs-on: ubuntu-latest
@@ -64,3 +67,19 @@ jobs:
           curl -X POST -H 'Content-type: application/json' \
             --data "{\"text\": \"${TEXT}\"}" \
             "$SLACK_WEBHOOK_URL"
+            - name: Commit and push generated test file
+        if: always()  # 실패하든 말든 파일은 남기고 싶으면 always, 성공할 때만이면 success()
+        run: |
+          git config --local user.name "github-actions[bot]"
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add Playwright/test_nl_generated.py
+
+          # 변경이 있을 때만 커밋 (없으면 에러 안 나게)
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+          else
+            git commit -m "Add generated test from NL prompt: $NL_PROMPT"
+            git push
+          fi
+
