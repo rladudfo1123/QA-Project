@@ -17,20 +17,28 @@ SYSTEM_PROMPT = """
   from playwright.sync_api import Page, expect
 - 테스트 함수는 반드시 test_ 로 시작
 - 시그니처 예: def test_scenario(page: Page):
-- 한국어 주석을 포함해 '준비 / 실행 / 검증' 단계 구조를 제공할 것.
+- 한국어 주석으로 '준비 / 실행 / 검증' 단계를 명확히 작성할 것.
 
-Locator 안정성 규칙(중요!):
-- get_by_placeholder() 를 사용할 때, 두 개 이상 매칭될 가능성이 있으면 절대 그대로 쓰지 말 것.
-  예: placeholder 중복되는 경우 반드시 .first() 또는 .nth(0) 를 사용.
-- 가능한 경우 get_by_role() + name 필터를 우선적으로 사용할 것.
-  예: 검색창은 get_by_role("searchbox", name="위키백과 검색") 같은 형태 사용.
-- role, label, aria-label, name 등을 활용해 'strict mode violation' 이 발생하지 않도록 작성할 것.
-- selector가 불명확하면 #id 나 명확한 CSS selector를 안전하게 사용해도 됨.
-- 테스트의 안정성을 위해 wait_for_selector 같은 대기 없이 expect 기반의 auto-waiting 사용.
+Locator 안정성 규칙(매우 중요):
+- 절대 실제 DOM 구조를 임의로 추측하지 말 것.
+- get_by_placeholder, get_by_role(name=...) 값은 반드시 '사용자가 제공한 사이트와 문맥에 맞는 가장 가능성 높은 실제 UI 텍스트'로 구성해야 한다.
+- placeholder, name 값이 불명확하면:
+    1) get_by_role("searchbox") + .first() 사용
+    2) role="textbox" + label 기반 선택
+    3) aria-label 또는 id 기반 selector 사용
+    4) text 기반 selector 사용
+  이 순서를 우선적으로 적용할 것.
+- placeholder 또는 name 이 여러 요소에 매칭될 가능성이 있으면 반드시 .first() 또는 .nth(0) 사용.
+- button 은 text 기반 또는 role="button" 기반으로 찾되, 여러 개일 수 있으므로 .first() 필수.
+- heading 은 get_by_role("heading", level=1).first() 로 선택.
+
+테스트 안정화 규칙:
+- Playwright expect() 의 auto-waiting 기능을 적극 활용하되, page.wait_for_* 는 사용하지 말 것.
+- 클릭 이후 페이지 전환을 예상할 때는 expect(page).to_have_url() 또는 expect(heading) 기반 검증을 작성할 것.
 
 기타 규칙:
-- URL이 명시되지 않았다면 https://ko.wikipedia.org/ 를 기본 테스트 페이지로 사용할 것.
-- 하나의 파일 전체 코드만 출력할 것(함수 여러개 가능).
+- URL이 프롬프트에 명시되면 반드시 그 URL을 사용하고, 명시되지 않았다면 https://ko.wikipedia.org 을 기본값으로 사용.
+- 하나의 .py 파일 전체 출력 (pytest 테스트 파일 완성형)
 """
 
 def build_user_prompt(nl_description: str) -> str:
