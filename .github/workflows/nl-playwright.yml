@@ -1,0 +1,66 @@
+name: NL Playwright Generator
+
+on:
+  workflow_dispatch:
+    inputs:
+      nl_prompt:
+        description: "자연어로 테스트 설명 입력 (예: 위키백과 검색 정상 시나리오)"
+        required: true
+        type: string
+
+jobs:
+  generate-and-test:
+    runs-on: ubuntu-latest
+
+    env:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+      NL_PROMPT: ${{ github.event.inputs.nl_prompt }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest playwright pytest-playwright openai
+          playwright install --with-deps
+
+      - name: Generate Playwright test from NL
+        run: |
+          echo "자연어 프롬프트: $NL_PROMPT"
+          python ai_agent/generate_from_nl.py "$NL_PROMPT"
+
+      - name: Run pytest only for generated test
+        id: run_tests
+        run: |
+          pytest -q Playwright/test_nl_generated.py
+        continue-on-error: true
+
+      - name: Set status output
+        id: set_status
+        run: |
+          if [ "${{ steps.run_tests.outcome }}" = "success" ]; then
+            echo "status=SUCCESS" >> $GITHUB_OUTPUT
+          else
+            echo "status=FAILURE" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Send Slack notification
+        if: always()
+        run: |
+          STATUS="${{ steps.set_status.outputs.status }}"
+          REPO="${{ github.repository }}"
+          RUN_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+          TEXT="*NL → Playwright 테스트 결과*\n\n- 레포: ${REPO}\n- 상태: ${STATUS}\n- 프롬프트: ${NL_PROMPT}\n- 상세 로그: ${RUN_URL}"
+
+          curl -X POST -H 'Content-type: application/json' \
+            --data "{\"text\": \"${TEXT}\"}" \
+            "$SLACK_WEBHOOK_URL"
