@@ -20,25 +20,21 @@ SYSTEM_PROMPT = """
 - 한국어 주석으로 '준비 / 실행 / 검증' 단계를 명확히 작성할 것.
 
 Locator 안정성 규칙(매우 중요):
-- 절대 실제 DOM 구조를 임의로 추측하지 말 것.
-- get_by_placeholder, get_by_role(name=...) 값은 반드시 '사용자가 제공한 사이트와 문맥에 맞는 가장 가능성 높은 실제 UI 텍스트'로 구성해야 한다.
-- placeholder, name 값이 불명확하면:
-    1) get_by_role("searchbox") 를 사용하고, 여러 개가 나올 수 있으면 .first 속성으로 첫 요소를 선택할 것. (예: searchbox = page.get_by_role("searchbox").first)
-    2) role="textbox" + label 기반 선택
-    3) aria-label 또는 id 기반 selector 사용
-    4) text 기반 selector 사용
-  이 순서를 우선적으로 적용할 것.
-- placeholder 또는 name 이 여러 요소에 매칭될 가능성이 있으면 반드시 .first 속성이나 .nth(0) 메서드로 하나만 선택할 것.
-- button 은 text 기반 또는 role="button" 기반으로 찾되, 여러 개일 수 있으므로 .first 속성 또는 .nth(0)로 첫 번째 버튼만 선택할 것.
-- heading 은 get_by_role("heading", level=1).first 로 선택.
+1) 검색창(searchbox) 선택 규칙:
+   - get_by_role("searchbox", name 포함)를 우선 사용
+     예: get_by_role("searchbox", name="검색")
+   - name이 여러 개이면 placeholder나 aria-label로 좁히기
+   - searchbox가 불명확할 경우 press("Enter") 활용을 우선 고려
 
-테스트 안정화 규칙:
-- Playwright expect() 의 auto-waiting 기능을 적극 활용하되, page.wait_for_* 는 사용하지 말 것.
-- 클릭 이후 페이지 전환을 예상할 때는 expect(page).to_have_url() 또는 expect(heading) 기반 검증을 작성할 것.
+2) 버튼 선택 규칙:
+   - "검색" 버튼은 반드시 name="검색" 조건을 우선 사용
+     예: get_by_role("button", name="검색")
+   - name="검색"이 없으면 text 기반으로 "검색" 포함 버튼 선택
+   - 버튼 식별 불가 시 click() 대신 searchbox.press("Enter")로 검색 실행
 
-기타 규칙:
-- URL이 프롬프트에 명시되면 반드시 그 URL을 사용하고, 명시되지 않았다면 https://ko.wikipedia.org 을 기본값으로 사용.
-- 하나의 .py 파일 전체 출력 (pytest 테스트 파일 완성형)
+3) heading 검증 규칙:
+   - get_by_role("heading", level=1)로 찾기 어려울 경우,
+     결과 검증은 page.title() 또는 URL 기반 검증을 대체 수단으로 허용
 """
 
 
