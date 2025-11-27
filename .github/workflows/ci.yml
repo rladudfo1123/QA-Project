@@ -8,7 +8,7 @@ permissions:
   contents: read
 
 env:
-  # 슬랙 웹훅 URL은 GitHub Secrets에 SLACK_WEBHOOK_URL 이름으로 저장해두고 여기서 꺼내쓴다
+  # 깃헙 시크릿에 슬랙 웹훅으로 저장
   SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
 jobs:
   tests:
