@@ -3,9 +3,10 @@ import os
 import sys
 from openai import OpenAI
 
-MODEL = "gpt-4.1-mini"  # 원하면 모델명 바꿔도 됨
+MODEL = "gpt-4.1-mini"  # 모델명 바꿔도 됨
 
-SYSTEM_PROMPT = """
+# 시스템 프롬프트 입력
+SYSTEM_PROMPT = """   
 너는 Playwright + pytest 기반의 테스트 자동화 엔지니어야.
 사용자가 자연어로 웹 테스트 요구사항을 설명하면,
 아래 기준에 맞는 '완전한 pytest 테스트 파일(.py)' 전체를 생성해.
@@ -99,19 +100,15 @@ def build_user_prompt(nl_description: str) -> str:
 """
 
 def extract_code(block: str) -> str:
-    # ```python ... ``` 형식 제거
     if "```" not in block:
         return block
 
     parts = block.split("```")
-    # ```python\n...\n``` 구조일 가능성
     for part in parts:
         part = part.strip()
         if part.startswith("python"):
             lines = part.splitlines()
-            # 첫 줄 'python' 제거
             return "\n".join(lines[1:])
-    # 그냥 첫 코드 블럭 사용
     if len(parts) >= 2:
         return parts[1]
     return block
